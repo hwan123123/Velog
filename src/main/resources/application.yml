@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: blog
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/blog?useSSL=false&serverTimezone=UTC
+    username: hwan
+    password: hwan1487
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    jpa:
+      hibernate:
+        ddl-auto: update
+      show-sql: true
+
+  thymeleaf:
+    cache: false
+
+server:
+  port: 8080

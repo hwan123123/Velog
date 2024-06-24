@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Error</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body>
+<h2>Error</h2>
+<div th:if="${#fields.hasErrors('username')}">
+    <p th:errors="*{username}">Username Error</p>
+</div>
+<div th:if="${#fields.hasErrors('email')}">
+    <p th:errors="*{email}">Email Error</p>
+</div>
+<p>
+    <a th:href="@{/userregform}">Back to Register</a>
+</p>
+</body>
+</html>
