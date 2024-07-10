@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Post Detail</title>
+    <link href="/css/styles.css" rel="stylesheet"/>
+</head>
+<body>
+<nav th:replace="~{navbar::nav(loginUser=${loginUser})}"></nav>
+<section>
+    <div class="container">
+        <h1 class="field" th:text="${post.title}"></h1>
+        <div class="field">
+            <span th:text="${post.blog.name}"></span>
+            |
+            <span th:text="${#temporals.format(post.registrationDate, 'YYYY/MM/dd HH:mm')}"></span>
+        </div>
+        <div class="field" th:text="${post.content}"></div>
+    </div>
+</section>
+</body>
+</html>

@@ -1,40 +1,45 @@
 package org.example.blogproject.service;
 
-import org.example.blogproject.domain.Role;
+import java.time.LocalDateTime;
+
 import org.example.blogproject.domain.User;
 import org.example.blogproject.repository.RoleRepository;
 import org.example.blogproject.repository.UserRepository;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
-import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 
 @Service
+@RequiredArgsConstructor
 public class UserService {
-
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
-    private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder) {
-        this.userRepository = userRepository;
-        this.roleRepository = roleRepository;
-        this.passwordEncoder = passwordEncoder;
-    }
+    @Transactional(readOnly = false)
+    public void regUser(User user) {
+        user.setRegistrationDate(LocalDateTime.now());
+        user.getRoles().add(roleRepository.findByName("USER"));
 
-    public User registerNewUser(User user) {
+        PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
         user.setPassword(passwordEncoder.encode(user.getPassword()));
-        Role userRole = roleRepository.findByName("ROLE_USER").orElseThrow(() -> new RuntimeException("User Role not set."));
-        user.setRoles(Collections.singleton(userRole));
-        return userRepository.save(user);
+        userRepository.save(user);
     }
 
-    public Optional<User> findByUsername(String username) {
+    @Transactional(readOnly = true)
+    public User findByUsername(String username) {
         return userRepository.findByUsername(username);
     }
 
-    public Optional<User> findByEmail(String email) {
+    @Transactional(readOnly = true)
+    public User findByEmail(String email) {
         return userRepository.findByEmail(email);
+    }
+
+    @Transactional(readOnly = true)
+    public User findById(Long id) {
+        return userRepository.findById(id).orElse(null);
     }
 }

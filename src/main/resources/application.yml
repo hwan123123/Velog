@@ -1,19 +1,23 @@
 spring:
   application:
-    name: blog
+    name: velog
 
   datasource:
-    url: jdbc:mysql://localhost:3306/blog?useSSL=false&serverTimezone=UTC
+    url: jdbc:mysql://localhost:3306/velog
     username: hwan
     password: hwan1487
     driver-class-name: com.mysql.cj.jdbc.Driver
-    jpa:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
       hibernate:
-        ddl-auto: update
-      show-sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
 
-  thymeleaf:
-    cache: false
+jwt:
+  secretKey: 12345678901234567890123456789012
+  refreshKey: 12345678901234567890123456789012
 
 server:
   port: 8080

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>HOME</title>
+    <link href="/css/styles.css" rel="stylesheet"/>
+</head>
+<body>
+<nav th:replace="~{navbar::nav(loginUser=${loginUser})}"></nav>
+<section class="py-5">
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col mb-5" th:each="post : ${posts}">
+                <a th:href="@{'/@' + ${post.blog.user.username} + '/' + ${post.title}}" class="text-decoration-none">
+                    <div class="post h-100">
+                        <img class="post-img-top" src="/images/bono.png" alt="..."/>
+                        <div class="post-body">
+                            <h5 class="fw-bolder"
+                                th:text="${post.title.length() > 15} ? ${#strings.substring(post.title, 0, 15)} + '...' : ${post.title}"></h5>
+                            <p th:text="${post.content.length() > 30} ? ${#strings.substring(post.title, 0, 30)} + '...' : ${post.content}"></p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+    <div th:if="${posts.totalPages} >= 1" class="pagination">
+        <ul>
+            <li th:each="i : ${#numbers.sequence(1, posts.totalPages)}">
+                <a th:href="@{/(page=${i})}" th:text="${i}"></a>
+            </li>
+        </ul>
+    </div>
+</section>
+<script src="/js/home.js"></script>
+</body>
+</html>

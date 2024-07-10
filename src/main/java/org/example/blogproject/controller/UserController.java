@@ -1,63 +1,126 @@
 package org.example.blogproject.controller;
 
-import org.example.blogproject.domain.User;
-import org.example.blogproject.service.UserService;
-import org.springframework.stereotype.Controller;
-import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.ModelAndView;
+import java.util.List;
+import java.util.stream.Collectors;
 
-import java.util.Optional;
+import org.example.blogproject.service.UserService;
+import org.example.blogproject.domain.RefreshToken;
+import org.example.blogproject.domain.Role;
+import org.example.blogproject.domain.User;
+import org.example.blogproject.dto.UserLoginDto;
+import org.example.blogproject.jwt.util.JwtTokenizer;
+import org.example.blogproject.service.BlogService;
+import org.example.blogproject.service.RefreshTokenService;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
+
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Controller
+@RequiredArgsConstructor
+@Slf4j
 public class UserController {
-
     private final UserService userService;
+    private final BlogService blogService;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtTokenizer jwtTokenizer;
+    private final RefreshTokenService refreshTokenService;
 
-    public UserController(UserService userService) {
-        this.userService = userService;
-    }
+    @GetMapping("/userreg")
+    public String userregform(Model model, @AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails != null) {
+            model.addAttribute("loginUser", userDetails.getUsername());
+        }
 
-    @GetMapping("/loginform")
-    public String loginForm() {
-        return "loginform";
-    }
-
-    @GetMapping("/userregform")
-    public ModelAndView userRegForm() {
-        ModelAndView modelAndView = new ModelAndView("userregform");
-        modelAndView.addObject("user", new User());
-        return modelAndView;
+        model.addAttribute("user", new User());
+        return "pages/users/userregform";
     }
 
     @PostMapping("/userreg")
-    public ModelAndView registerUser(@ModelAttribute("user") User user, BindingResult bindingResult) {
-        ModelAndView modelAndView = new ModelAndView("userregform");
+    public String userreg(@ModelAttribute("user") User user) {
 
-        Optional<User> existingUserByUsername = userService.findByUsername(user.getUsername());
-        Optional<User> existingUserByEmail = userService.findByEmail(user.getEmail());
+        userService.regUser(user);
+        blogService.makeBlog(user);
 
-        if (existingUserByUsername.isPresent() || existingUserByEmail.isPresent()) {
-            bindingResult.rejectValue("username", "error.user", "Username or email is already taken");
-            return modelAndView;
-        }
-
-        if (bindingResult.hasErrors()) {
-            return modelAndView;
-        }
-
-        userService.registerNewUser(user);
-        modelAndView.setViewName("userreg");
-        return modelAndView;
+        return "redirect:/welcome";
     }
 
-    @GetMapping("/userreg")
-    public String userReg() {
-        return "userreg";
+    @GetMapping("/login")
+    public String loginform(Model model, @AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails != null) {
+            model.addAttribute("loginUser", userDetails.getUsername());
+        }
+
+        model.addAttribute("loginDto", new UserLoginDto());
+
+        return "pages/users/loginform";
     }
 
-    @GetMapping("/welcome")
-    public String welcome() {
-        return "welcome";
+    @PostMapping("/login")
+    public String login(@ModelAttribute("loginDto") UserLoginDto loginDto, Model model, HttpServletResponse response) {
+        User user = userService.findByUsername(loginDto.getUsername());
+        if (user == null || !passwordEncoder.matches(loginDto.getPassword(), user.getPassword())) {
+            model.addAttribute("failLogin", "아이디와 비밀번호가 일치하지 않습니다.");
+            return "pages/users/loginform";
+        }
+
+        List<String> roles = user.getRoles().stream().map(Role::getName).collect(Collectors.toList());
+
+        String accessToken = jwtTokenizer.createAccessToken(
+                user.getId(), user.getEmail(), user.getName(), user.getUsername(), roles);
+        String refreshToken = jwtTokenizer.createRefreshToken(
+                user.getId(), user.getEmail(), user.getName(), user.getUsername(), roles);
+
+        RefreshToken refreshTokenEntity = new RefreshToken();
+        refreshTokenEntity.setValue(refreshToken);
+        refreshTokenEntity.setUserId(user.getId());
+
+        refreshTokenService.deleteRefreshToken(user.getUsername());
+        refreshTokenService.addRefreshToken(refreshTokenEntity);
+
+        Cookie accessTokenCookie = new Cookie("accessToken", accessToken);
+        accessTokenCookie.setHttpOnly(true);
+        accessTokenCookie.setPath("/");
+        accessTokenCookie.setMaxAge(
+                Math.toIntExact(JwtTokenizer.ACCESS_TOKEN_EXPIRE_COUNT / 1000));
+
+        Cookie refreshTokenCookie = new Cookie("refreshToken", refreshToken);
+        refreshTokenCookie.setHttpOnly(true);
+        refreshTokenCookie.setPath("/");
+        refreshTokenCookie.setMaxAge(Math.toIntExact(JwtTokenizer.REFRESH_TOKEN_EXPIRE_COUNT / 1000));
+
+        response.addCookie(accessTokenCookie);
+        response.addCookie(refreshTokenCookie);
+
+        return "redirect:/";
+    }
+
+    @GetMapping("/logout")
+    public String logout(HttpServletResponse response, @AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails != null) {
+            refreshTokenService.deleteRefreshToken(userDetails.getUsername());
+        }
+
+        Cookie accessTokenCookie = new Cookie("accessToken", null);
+        accessTokenCookie.setPath("/");
+        accessTokenCookie.setMaxAge(0);
+
+        Cookie refreshTokenCookie = new Cookie("refreshToken", null);
+        refreshTokenCookie.setPath("/");
+        refreshTokenCookie.setMaxAge(0);
+
+        response.addCookie(accessTokenCookie);
+        response.addCookie(refreshTokenCookie);
+
+        return "redirect:/";
     }
 }
