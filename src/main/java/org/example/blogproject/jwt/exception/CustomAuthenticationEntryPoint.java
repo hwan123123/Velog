@@ -1,55 +1,45 @@
 package org.example.blogproject.jwt.exception;
 
-import java.io.IOException;
-import java.util.HashMap;
-
-import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.web.AuthenticationEntryPoint;
-import org.springframework.stereotype.Component;
-
 import com.google.gson.Gson;
-
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.stereotype.Component;
+
+import java.io.IOException;
+import java.util.HashMap;
 
 @Component
 @Slf4j
 public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint {
-    // Security가 인증되지 않은 사용자가 인증해야만 사용할 수 있는 리소스에 접근할 때 동작하게 하는 인터페이스
-    // 사용자가 인증되지 않았을 때 어떻게 처리할 지를 구현함
     @Override
-    public void commence(HttpServletRequest request, HttpServletResponse response,
-                         AuthenticationException authException) throws IOException, ServletException {
+    public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
         String exception = (String) request.getAttribute("exception");
 
-        // 어떤 요청인지를 구분
-        // RESTful로 요청한 건지 그냥 페이지를 요청한 건지 구분해서 다르게 동작하도록 구현
-        if (isRestRequest(request)) {
+        if(isRestRequest(request)){
             handleRestResponse(request, response, exception);
         } else {
-            handlePageResponse(request, response, exception);
+            handleRestResponse(request, response, exception);
         }
     }
 
+    private void handlePageResponse(HttpServletRequest request, HttpServletResponse response, String exception) throws IOException {
+        log.error("Page Request - Commence Get Exception : {}", exception);
+
+        if (exception != null) {
+        }
+
+        response.sendRedirect("/loginform");
+    }
     private boolean isRestRequest(HttpServletRequest request) {
         String requestedWithHeader = request.getHeader("X-Requested-With");
         return "XMLHttpRequest".equals(requestedWithHeader) || request.getRequestURI().startsWith("/api/");
     }
 
-    // 페이지로 요청이 들어왔을 때 인증되지 않은 사용자라면 무조건 /loginform으로 리디렉션 시키겠다.
-    private void handlePageResponse(HttpServletRequest request, HttpServletResponse response, String exception) throws IOException {
-        log.error("Page Request - Commence Get Exception : {}", exception);
-
-        if (exception != null) {
-            // 추가적인 페이지 요청에 대한 예외 처리 로직을 여기에 추가할 수 있습니다.
-        }
-        response.sendRedirect("/login");
-    }
-
-    private void handleRestResponse(HttpServletRequest request, HttpServletResponse response, String exception) throws
-            IOException {
+    private void handleRestResponse(HttpServletRequest request, HttpServletResponse response, String exception) throws IOException {
         log.error("Rest Request - Commence Get Exception : {}", exception);
 
         if (exception != null) {
@@ -72,7 +62,6 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
             setResponse(response, JwtExceptionCode.UNKNOWN_ERROR);
         }
     }
-
     private void setResponse(HttpServletResponse response, JwtExceptionCode exceptionCode) throws IOException {
         response.setContentType("application/json;charset=UTF-8");
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);

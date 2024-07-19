@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org/">
+<head>
+    <meta charset="UTF-8">
+    <title>게시글 상세보기</title>
+    <link rel="stylesheet" th:href="@{/css/background.css}">
+    <link rel="stylesheet" th:href="@{/css/header.css}">
+    <link rel="stylesheet" th:href="@{/css/postDetail.css}">
+</head>
+<body>
+<header>
+    <div class="header">
+        <a class="blog-name" th:href="@{/velog}" th:text="${loginUser.name} + 'log'"></a>
+        <a class="new-write" th:href="@{'/velog/' + ${loginUser.username} + '/post'}">
+            <button type="button">New Post</button>
+        </a>
+        <div class="user-settings">
+            <img class="profile-image" th:src="@{'/images/' + ${loginUser.profileImage}}" alt="Profile Image">
+            <div class="dropdown-content">
+                <a th:href="@{'/velog/' + ${loginUser.username}}">내 블로그</a>
+                <a th:href="@{'/velog/' + ${loginUser.username} + '/drafts'}">임시 글</a>
+                <a th:href="@{'/velog/' + ${loginUser.username} + '/settings'}">설정</a>
+                <a id="logout-button">로그아웃</a>
+            </div>
+        </div>
+    </div>
+</header>
+<main class="main">
+    <div class="post-container">
+        <h1 class="post-title" th:text="${post.title}">Post Title</h1>
+        <div class="post-meta">
+            <span th:text="'By ' + ${post.author} +' | '">Author</span>
+            <span th:text="${#temporals.format(post.releaseDate, 'yyyy-MM-dd HH:mm')}">Release Date</span>
+            <a class="edit-button" th:href="@{'/velog/' + ${loginUser.username} + '/post/' + ${post.id} + '/' + ${post.encodedTitle} + '/edit'}">Edit</a>
+        </div>
+        <div class="post-content" th:utext="${post.content}">
+        </div>
+    </div>
+
+    <div class="comments">
+        <h2>Comment</h2>
+        <form th:action="@{'/velog/' + ${username} + '/post/' + ${post.id} + '/' + ${post.encodedTitle} + '/comment'}" method="post">
+            <textarea name="content" placeholder="..."></textarea>
+            <button type="submit">댓글 작성</button>
+        </form>
+        <div class="comment-list" th:each="comment : ${comments}">
+            <div class="comment-item">
+                <div class="comment-meta">
+                    <img class="profile-image" th:if="${comment.user != null and comment.user.profileImage != null}" th:src="@{'/images/' + ${comment.user.profileImage}}" alt="Profile Image">
+                    <span class="comment-author" th:if="${comment.user != null}" th:text="${comment.user.username}"></span>
+                    <span th:text="${#temporals.format(comment.creationDate, 'yyyy-MM-dd HH:mm')}"></span>
+                </div>
+                <div class="comment-content" th:text="${comment.content}"></div>
+                <button type="button" class="reply-button" th:data-comment-id="${comment.id}">답글 달기</button>
+                <button type="button" class="delete-comment-button" th:data-comment-id="${comment.id}">삭제</button>
+                <div th:id="'reply-form-' + ${comment.id}" style="display:none;">
+                    <form th:action="@{'/velog/' + ${username} + '/post/' + ${post.id} + '/' + ${post.encodedTitle} + '/comment'}" method="post">
+                        <textarea name="content" placeholder="..."></textarea>
+                        <input type="hidden" name="parentId" th:value="${comment.id}">
+                        <button type="submit">Submit</button>
+                        <button type="button" class="cancel-reply-button" th:data-comment-id="${comment.id}">Cancel</button>
+                    </form>
+                </div>
+                <div class="replies" th:each="reply : ${comment.replies}">
+                    <div class="reply-item">
+                        <div class="comment-meta">
+                            <img class="profile-image" th:if="${reply.user != null and reply.user.profileImage != null}" th:src="@{'/images/' + ${reply.user.profileImage}}" alt="Profile Image">
+                            <span class="comment-author" th:if="${reply.user != null}" th:text="${reply.user.username}"></span>
+                            <span th:text="${#temporals.format(reply.creationDate, 'yyyy-MM-dd HH:mm')}"></span>
+                        </div>
+                        <div class="comment-content" th:text="${reply.content}"></div>
+                        <button type="button" class="delete-reply-button" th:data-reply-id="${reply.id}">삭제</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script th:src="@{/js/header.js}"></script>
+<script th:src="@{/js/postDetail.js}"></script>
+</body>
+</html>

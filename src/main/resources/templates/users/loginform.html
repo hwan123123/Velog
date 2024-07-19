@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org/">
+<head>
+    <meta charset="UTF-8">
+    <title>Login Page</title>
+    <link rel="stylesheet" th:href="@{/css/background.css}">
+    <link rel="stylesheet" th:href="@{/css/login.css}"/>
+    <script>
+        function showError(message) {
+            alert(message);
+        }
+    </script>
+</head>
+<body>
+<main>
+    <div class="login-box">
+        <div class="login-head">
+            <p>LOGIN</p>
+        </div>
+        <div class="login-body">
+            <form th:action="@{/velog/login}" method="post" th:object="${loginDto}">
+                <div class="input-box">
+                    <div class="username">
+                        <br><label for="username">Enter Your Username</label>
+                        <br><input class="input-username" type="text" id="username" th:field="*{username}" required>
+                    </div>
+                    <div class="password">
+                        <br><label for="password">Enter Your Password</label>
+                        <br><input class="input-password" type="password" id="password" th:field="*{password}" required>
+                    </div>
+                    <div class="enter-button">
+                        <a th:href="@{/velog/userregform}">SignUp now</a>
+                        <br>
+                        <a th:href="@{/oauth2/authorization/github}" class="btn btn-primary">Login with GitHub</a>
+                        <button type="submit">Login</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</main>
+
+</body>
+</html>

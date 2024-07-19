@@ -1,11 +1,17 @@
 package org.example.blogproject.dto;
 
-import lombok.Getter;
-import lombok.Setter;
+import jakarta.validation.constraints.NotEmpty;
+import lombok.*;
 
 @Getter
 @Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class UserLoginDto {
+    @NotEmpty
     private String username;
+
+    @NotEmpty
     private String password;
 }

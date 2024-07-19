@@ -1,0 +1,97 @@
+@import url('https://fonts.googleapis.com/css2?family=Holtwood+One+SC&display=swap');
+
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    background-color: #f5f5f5;
+}
+
+.signup-box {
+    width: 400px;
+    padding: 40px;
+    background-color: #fff;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+}
+
+.signup-head {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.signup-head p {
+    margin: 0;
+    font-family: "Holtwood One SC", serif;
+    font-size: 2em;
+    color: #007bff;
+}
+
+.signup-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.input-container {
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+.input-container input {
+    width: calc(100% - 20px);
+    padding: 10px;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    margin-top: 5px;
+    font-size: 16px;
+}
+
+.role-select {
+    margin-bottom: 20px;
+}
+
+.role-select input[type=radio] {
+    display: none;
+}
+
+.role-select input[type=radio]+label {
+    display: inline-block;
+    cursor: pointer;
+    height: 24px;
+    width: 100px;
+    border: 1px solid #007bff;
+    border-radius: 5px;
+    line-height: 24px;
+    text-align: center;
+    font-weight: bold;
+    color: #007bff;
+    transition: background 0.3s;
+}
+
+.role-select input[type=radio]:checked+label {
+    background-color: #007bff;
+    color: #fff;
+}
+
+.role-select button {
+    background-color: #007bff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    height: 40px;
+    width: 100px;
+    text-align: center;
+    font-weight: bold;
+    color: #fff;
+    font-size: 16px;
+    transition: background 0.3s;
+}
+
+.role-select button:hover {
+    background-color: #0056b3;
+}

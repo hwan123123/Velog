@@ -1,126 +1,119 @@
 package org.example.blogproject.controller;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
-import org.example.blogproject.service.UserService;
-import org.example.blogproject.domain.RefreshToken;
-import org.example.blogproject.domain.Role;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.example.blogproject.domain.Post;
 import org.example.blogproject.domain.User;
 import org.example.blogproject.dto.UserLoginDto;
 import org.example.blogproject.jwt.util.JwtTokenizer;
-import org.example.blogproject.service.BlogService;
+import org.example.blogproject.service.PostService;
 import org.example.blogproject.service.RefreshTokenService;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.example.blogproject.service.UserService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.Principal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 @Controller
 @RequiredArgsConstructor
+@RequestMapping("/velog")
 @Slf4j
 public class UserController {
     private final UserService userService;
-    private final BlogService blogService;
-    private final PasswordEncoder passwordEncoder;
     private final JwtTokenizer jwtTokenizer;
     private final RefreshTokenService refreshTokenService;
+    private final PasswordEncoder passwordEncoder;
+    private final PostService postService;
 
-    @GetMapping("/userreg")
-    public String userregform(Model model, @AuthenticationPrincipal UserDetails userDetails) {
-        if (userDetails != null) {
-            model.addAttribute("loginUser", userDetails.getUsername());
-        }
-
-        model.addAttribute("user", new User());
-        return "pages/users/userregform";
-    }
-
-    @PostMapping("/userreg")
-    public String userreg(@ModelAttribute("user") User user) {
-
-        userService.regUser(user);
-        blogService.makeBlog(user);
-
-        return "redirect:/welcome";
-    }
-
-    @GetMapping("/login")
-    public String loginform(Model model, @AuthenticationPrincipal UserDetails userDetails) {
-        if (userDetails != null) {
-            model.addAttribute("loginUser", userDetails.getUsername());
-        }
-
+    @GetMapping("/loginform")
+    public String showLoginForm(Model model) {
         model.addAttribute("loginDto", new UserLoginDto());
-
-        return "pages/users/loginform";
+        return "users/loginform";
     }
 
-    @PostMapping("/login")
-    public String login(@ModelAttribute("loginDto") UserLoginDto loginDto, Model model, HttpServletResponse response) {
-        User user = userService.findByUsername(loginDto.getUsername());
-        if (user == null || !passwordEncoder.matches(loginDto.getPassword(), user.getPassword())) {
-            model.addAttribute("failLogin", "아이디와 비밀번호가 일치하지 않습니다.");
-            return "pages/users/loginform";
-        }
-
-        List<String> roles = user.getRoles().stream().map(Role::getName).collect(Collectors.toList());
-
-        String accessToken = jwtTokenizer.createAccessToken(
-                user.getId(), user.getEmail(), user.getName(), user.getUsername(), roles);
-        String refreshToken = jwtTokenizer.createRefreshToken(
-                user.getId(), user.getEmail(), user.getName(), user.getUsername(), roles);
-
-        RefreshToken refreshTokenEntity = new RefreshToken();
-        refreshTokenEntity.setValue(refreshToken);
-        refreshTokenEntity.setUserId(user.getId());
-
-        refreshTokenService.deleteRefreshToken(user.getUsername());
-        refreshTokenService.addRefreshToken(refreshTokenEntity);
-
-        Cookie accessTokenCookie = new Cookie("accessToken", accessToken);
-        accessTokenCookie.setHttpOnly(true);
-        accessTokenCookie.setPath("/");
-        accessTokenCookie.setMaxAge(
-                Math.toIntExact(JwtTokenizer.ACCESS_TOKEN_EXPIRE_COUNT / 1000));
-
-        Cookie refreshTokenCookie = new Cookie("refreshToken", refreshToken);
-        refreshTokenCookie.setHttpOnly(true);
-        refreshTokenCookie.setPath("/");
-        refreshTokenCookie.setMaxAge(Math.toIntExact(JwtTokenizer.REFRESH_TOKEN_EXPIRE_COUNT / 1000));
-
-        response.addCookie(accessTokenCookie);
-        response.addCookie(refreshTokenCookie);
-
-        return "redirect:/";
+    @GetMapping("/userregform")
+    public String userregForm() {
+        return "users/userregform";
     }
 
-    @GetMapping("/logout")
-    public String logout(HttpServletResponse response, @AuthenticationPrincipal UserDetails userDetails) {
-        if (userDetails != null) {
-            refreshTokenService.deleteRefreshToken(userDetails.getUsername());
+    @PostMapping("/userregform")
+    public String signUp(
+            @ModelAttribute User user, BindingResult result,
+            Model model) throws IOException {
+        if (result.hasErrors()) {
+            model.addAttribute("errorMessage", "다시 입력해주세요.");
+            return "error";
         }
 
-        Cookie accessTokenCookie = new Cookie("accessToken", null);
-        accessTokenCookie.setPath("/");
-        accessTokenCookie.setMaxAge(0);
+        MultipartFile profileImageFile = user.getProfileImageFile();
+        if (profileImageFile != null && !profileImageFile.isEmpty()) {
+            String filename = UUID.randomUUID().toString() + "_" + profileImageFile.getOriginalFilename();
+            Path imagePath = Paths.get("src/main/resources/static/images/" + filename);
+            Files.createDirectories(imagePath.getParent());
+            Files.write(imagePath, profileImageFile.getBytes());
+            user.setProfileImage(filename);
+        } else {
+            user.setProfileImage("bono.png");
+        }
 
-        Cookie refreshTokenCookie = new Cookie("refreshToken", null);
-        refreshTokenCookie.setPath("/");
-        refreshTokenCookie.setMaxAge(0);
+        model.addAttribute("userRegMessage", "Welcome " + user.getUsername());
+        userService.createUser(user, passwordEncoder);
 
-        response.addCookie(accessTokenCookie);
-        response.addCookie(refreshTokenCookie);
+        return "redirect:/velog";
+    }
 
-        return "redirect:/";
+    @GetMapping("/{username}/settings")
+    public String showSettings(@PathVariable String username, Model model, Principal principal) {
+        if (username.equals(principal.getName())) {
+            User user = userService.findByUsername(principal.getName());
+            model.addAttribute("user", user);
+        }
+        return "users/setting";
+    }
+
+    @PutMapping("/{username}/settings/update")
+    public String editUserInfo(@PathVariable String username, @ModelAttribute User updateUser, Principal principal) {
+        if (username.equals(principal.getName())) {
+            User user = userService.findByUsername(principal.getName());
+            userService.updateUser(user, updateUser);
+        }
+        return "users/setting";
+    }
+
+    @DeleteMapping("/{username}/settings/delete")
+    public String deleteUser(@PathVariable String username, @RequestParam("password") String password) {
+        User user = userService.findByUsername(username);
+        if (passwordEncoder.matches(password, user.getPassword())) {
+            userService.deleteUser(user);
+            log.info("User {} deleted", user.getUsername());
+        }
+        return "redirect:/logout";
+    }
+
+    @GetMapping("/{username}/drafts")
+    public String showUserBlogDrafts(@PathVariable String username, Model model) {
+        User loginUser = userService.findByUsername(username);
+        model.addAttribute("loginUser", loginUser);
+        List<Post> allPosts = postService.findAllByUserOrderByReleaseDateDesc(loginUser);
+        List<Post> archivedPosts = new ArrayList<>();
+
+        for (Post post : allPosts) {
+            if ("ARCHIVED".equals(post.getPostStatus().toString())) {
+                archivedPosts.add(post);
+            }
+        }
+        model.addAttribute("posts", archivedPosts);
+        return "draft";
     }
 }

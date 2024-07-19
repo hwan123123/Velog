@@ -1,18 +1,17 @@
 package org.example.blogproject.jwt.token;
 
-import java.util.Collection;
-
-import org.example.blogproject.security.CustomUserDetails;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
+
+import javax.security.auth.Subject;
+import java.util.Collection;
 
 public class JwtAuthenticationToken extends AbstractAuthenticationToken {
     private String token;
     private Object principal;
     private Object credentials;
 
-    public JwtAuthenticationToken(Collection<? extends GrantedAuthority> authorities,
-                                  Object principal, Object credentials) {
+    public JwtAuthenticationToken(Collection<? extends GrantedAuthority> authorities, Object principal, Object credentials) {
         super(authorities);
         this.principal = principal;
         this.credentials = credentials;
@@ -32,6 +31,11 @@ public class JwtAuthenticationToken extends AbstractAuthenticationToken {
 
     @Override
     public Object getPrincipal() {
-        return (CustomUserDetails)this.principal;
+        return this.principal;
+    }
+
+    @Override
+    public boolean implies(Subject subject) {
+        return super.implies(subject);
     }
 }

@@ -1,0 +1,81 @@
+.main {
+    color: #333;
+    background-color: #f9f9f9;
+    padding: 20px;
+}
+
+.post {
+    border: 1px solid #ddd;
+    padding: 20px;
+    margin: 15px 0;
+    border-radius: 8px;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.post h3 {
+    margin: 0 0 10px 0;
+    font-size: 1.5em;
+}
+
+.post p {
+    margin: 5px 0;
+    line-height: 1.6;
+}
+
+.post .delete-button {
+    background-color: #ff4d4d;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background 0.3s;
+}
+
+.post .delete-button:hover {
+    background-color: #ff1a1a;
+}
+
+.profile-image {
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    margin-right: 10px;
+}
+
+.header .user-profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    /*margin-right: 30px;*/
+}
+
+.header .dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: #f9f9f9;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1;
+}
+
+.header .user-settings:hover .dropdown-content {
+    display: block;
+}
+
+.header .user-settings {
+    position: relative;
+    display: inline-block;
+}
+
+.header .dropdown-content a {
+    color: black;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+}
+
+.header .dropdown-content a:hover {
+    background-color: #f1f1f1;
+}

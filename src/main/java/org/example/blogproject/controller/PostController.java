@@ -1,66 +1,111 @@
 package org.example.blogproject.controller;
 
-import org.example.blogproject.domain.Blog;
-import org.example.blogproject.service.BlogService;
-import org.example.blogproject.service.UserService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.example.blogproject.domain.Comment;
 import org.example.blogproject.domain.Post;
+import org.example.blogproject.domain.User;
+import org.example.blogproject.service.CommentService;
 import org.example.blogproject.service.PostService;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.example.blogproject.service.UserService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.Principal;
+import java.util.List;
+import java.util.UUID;
 
 @Controller
+@RequestMapping("/velog/{username}/post")
 @RequiredArgsConstructor
+@Slf4j
 public class PostController {
     private final PostService postService;
-    private final BlogService blogService;
     private final UserService userService;
+    private final CommentService commentService;
 
-    @GetMapping("/writepost")
-    public String writePostForm(Model model, @AuthenticationPrincipal UserDetails userDetails) {
-        if (userDetails != null) {
-            model.addAttribute("loginUser", userDetails.getUsername());
-        }
+    private static final String UPLOAD_DIR = "src/main/resources/static/images/";
+    private static final int THUMBNAIL_WIDTH = 300;
+    private static final int THUMBNAIL_HEIGHT = 300;
 
-        model.addAttribute("post", new Post());
-        return "pages/posts/writepost";
+    @GetMapping
+    public String showUserBlog(@PathVariable String username, Model model) {
+        User user = userService.findByUsername(username);
+        model.addAttribute("username", user.getUsername());
+        return "posts/post";
     }
 
-    @PostMapping("/writepost")
-    public String writePost(@Valid @ModelAttribute("post") Post post, BindingResult bindingResult,
-                            Model model, @AuthenticationPrincipal UserDetails userDetails) {
-        if (bindingResult.hasErrors()) {
-            if (userDetails != null) {
-                model.addAttribute("loginUser", userDetails.getUsername());
-            }
+    @PostMapping
+    public String postContent(@PathVariable String username, @ModelAttribute Post post) throws IOException {
 
-            return "pages/posts/writepost";
+        MultipartFile thumbnailImage = post.getThumbnailImageFile();
+        if (thumbnailImage != null && !thumbnailImage.isEmpty()) {
+            String filename = UUID.randomUUID().toString() + "_" + thumbnailImage.getOriginalFilename();
+            Path imagePath = Paths.get(UPLOAD_DIR + filename);
+            Files.createDirectories(imagePath.getParent());
+
+            Files.write(imagePath, thumbnailImage.getBytes());
+            post.setThumbnailImage(filename);
+        } else {
+            post.setThumbnailImage("default.png");
         }
-
-        postService.savePost(post, userDetails);
-
-        return "redirect:/";
+        postService.savePost(username, post);
+        return "redirect:/velog/" + username;
     }
 
-    @GetMapping("/@{username}/{title}")
-    public String postDetail(@PathVariable String username, @PathVariable String title, Model model,
-                             @AuthenticationPrincipal UserDetails userDetails) {
-        if (userDetails != null) {
-            model.addAttribute("loginUser", userDetails.getUsername());
-        }
+    @GetMapping("/{postId}/{encodedTitle}")
+    public String showPostDetail(@PathVariable String username, @PathVariable String encodedTitle, Model model, @PathVariable String postId){
+        User loginUser = userService.findByUsername(username);
+        Post post = postService.findById(Long.valueOf(postId));
+        List<Comment> allComments = commentService.findAllByPostIdOrderByCreationDate(post.getId());
 
-        Blog blog = blogService.findByUser(userService.findByUsername(username));
-        Post post = postService.findByBlogAndTitle(blog, title);
+        model.addAttribute("loginUser", loginUser);
         model.addAttribute("post", post);
-        return "pages/posts/postdetail";
+        model.addAttribute("comments", allComments);
+        model.addAttribute("username", username);
+        return "posts/postdetail";
+    }
+
+    @PostMapping("/{postId}/{encodedTitle}/comment")
+    public String postComment(@PathVariable String username, @PathVariable Long postId, @PathVariable String encodedTitle, @ModelAttribute Comment comment, @RequestParam(required = false) Long parentId, Principal principal) {
+        Post post = postService.findById(postId);
+        if (parentId != null) {
+            Comment parentComment = commentService.findById(parentId);
+            comment.setParent(parentComment);
+        }
+        comment.setPost(post);
+        User commentUser = userService.findByUsername(principal.getName());
+        comment.setUser(commentUser);
+        comment.setAuthor(commentUser.getUsername());
+        commentService.saveComment(comment);
+        return "redirect:/velog/" + username + "/post/" + postId + "/" + encodedTitle;
+    }
+
+    @GetMapping("/{postId}/{encodedTitle}/edit")
+    public String showEditPostForm(@PathVariable String username, @PathVariable String encodedTitle, Model model, @PathVariable String postId) {
+        Post post = postService.findById(Long.valueOf(postId));
+        model.addAttribute("post", post);
+        model.addAttribute("username", username);
+
+        return "posts/postedit";
+    }
+
+    @PostMapping("/{postId}/edit")
+    public String editPost(@PathVariable String username, @ModelAttribute Post updatePost, @PathVariable String postId) {
+        Post post = postService.findById(Long.valueOf(postId));
+        postService.updatePost(post, updatePost);
+        return "redirect:/velog/" + username;
+    }
+
+    @DeleteMapping("/{postId}/delete")
+    public void deletePost(@PathVariable String postId) {
+        log.info("Delete post id " + postId);
+        postService.deletePostById(Long.valueOf(postId));
     }
 }

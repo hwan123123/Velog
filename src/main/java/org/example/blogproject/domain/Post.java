@@ -1,8 +1,8 @@
 package org.example.blogproject.domain;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -10,43 +10,54 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
+import jakarta.persistence.*;
+import org.springframework.web.multipart.MultipartFile;
+
 @Entity
 @Table(name = "posts")
-@Getter
-@Setter
+@Getter @Setter
 public class Post {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "title", nullable = false)
-    @NotEmpty(message="필수 항목")
     private String title;
-
-    @Column(name = "content", nullable = false)
-    @NotEmpty(message="필수 항목")
+    private String encodedTitle;
+    private String tag;
+    private String ment;
     private String content;
+    private String author;
 
-    @Column(name = "registration_date", nullable = false)
-    private LocalDateTime registrationDate;
+    @Enumerated(EnumType.STRING)
+    private PostPopular postPopular;
 
-    @Column(name = "is_public", nullable = false)
-    @NotNull(message="필수 항목")
-    private Boolean isPublic;
+    @Enumerated(EnumType.STRING)
+    private PostStatus postStatus;
 
-    @Column(name = "is_published", nullable = false)
-    @NotNull(message="필수 항목")
-    private Boolean isPublished;
+    private LocalDateTime releaseDate = LocalDateTime.now();
+    private String thumbnailImage; // 파일명 저장 필드
 
-    @Column(name = "main_img_url")
-    private String mainImgUrl;
+    @Transient
+    private MultipartFile thumbnailImageFile;
 
     @ManyToOne
-    @JoinColumn(name = "blog_id", nullable = false)
-    private Blog blog;
+    private User user;
+
+//    @ManyToOne
+//    @JoinColumn(name = "blog_id")
+//    private Blog blog;
+//
+//    @OneToMany(mappedBy = "post")
+//    private List<Image> images;
+//
+    @OneToMany(mappedBy = "post")
+    private List<Comment> comments;
+
+    @ManyToOne
+    @JoinColumn(name = "userBlog_id")
+    private UserBlog userBlog;
+
 }

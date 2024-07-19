@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org/">
+<head>
+    <meta charset="UTF-8">
+    <title>Velog Main Page</title>
+    <link rel="stylesheet" th:href="@{/css/background.css}">
+    <link rel="stylesheet" th:href="@{/css/blog.css}">
+    <link rel="stylesheet" th:href="@{/css/header.css}">
+</head>
+<body>
+<header class="header">
+    <div class="blog-name">velog</div>
+    <nav class="menu">
+        <ul>
+            <li><a href="#">트렌딩</a></li>
+            <li><a href="#">최신</a></li>
+            <li><a href="#">피드</a></li>
+        </ul>
+    </nav>
+    <div class="auth-buttons">
+        <div th:if="${user != null}">
+            <a class="new-write" th:href="@{'/velog/' + ${user.username} + '/post'}">
+                <button type="button">New Post</button>
+            </a>
+            <div class="user-settings">
+                <img class="profile-image" th:src="@{'/images/' + ${user.profileImage}}" alt="Profile Image">
+                <div class="dropdown-content">
+                    <a th:href="@{'/velog/' + ${user.username}}">내 블로그</a>
+                    <a th:href="@{'/velog/' + ${user.username} + '/drafts'}">임시 글</a>
+                    <a th:href="@{'/velog/' + ${user.username} + '/settings'}">설정</a>
+                    <a id="logout-button">로그아웃</a>
+                </div>
+            </div>
+        </div>
+        <div th:if="${user == null}">
+            <button class="login" th:onclick="|location.href='@{/velog/loginform}'|">Login</button>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+    <div class="posts-container">
+        <div th:each="post : ${posts}" class="post-card">
+            <img th:src="@{/images/{thumbnailImage}(thumbnailImage=${post.thumbnailImage})}" alt="Thumbnail" class="post-thumbnail">
+            <div class="post-content">
+                <h2 th:text="${post.title}">Post Title</h2>
+                <p th:utext="${post.content}">Post Content</p>
+                <p class="post-meta">Posted on: <span th:text="${#temporals.format(post.releaseDate, 'yyyy-MM-dd HH:mm')}">Release Date</span></p>
+                <p class="post-meta">Author: <span th:text="${post.author}">Author</span></p>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script th:src="@{/js/header.js}"></script>
+<script th:src="@{/js/home.js}"></script>
+</body>
+</html>

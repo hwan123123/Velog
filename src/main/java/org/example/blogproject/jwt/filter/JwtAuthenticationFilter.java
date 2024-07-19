@@ -1,23 +1,5 @@
 package org.example.blogproject.jwt.filter;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
-
-import org.example.blogproject.jwt.exception.JwtExceptionCode;
-import org.example.blogproject.jwt.util.JwtTokenizer;
-import org.example.blogproject.security.CustomUserDetails;
-import org.example.blogproject.service.RefreshTokenService;
-import org.example.blogproject.service.UserService;
-import org.example.blogproject.jwt.token.JwtAuthenticationToken;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.util.StringUtils;
-import org.springframework.web.filter.OncePerRequestFilter;
-
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
@@ -30,72 +12,57 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-@RequiredArgsConstructor
+import org.example.blogproject.jwt.exception.JwtExceptionCode;
+import org.example.blogproject.jwt.token.JwtAuthenticationToken;
+import org.example.blogproject.jwt.util.JwtTokenizer;
+import org.example.blogproject.security.CustomUserDetails;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.util.StringUtils;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Slf4j
+@RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtTokenizer jwtTokenizer;
-    private final RefreshTokenService refreshTokenService;
-    private final UserService userService;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
-        String accessToken = getToken(request, "accessToken");
-        if (StringUtils.hasText(accessToken)) {
-            try {
-                getAuthentication(accessToken, "accessToken", response);
-            } catch (ExpiredJwtException e) {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+        String token = getToken(request);
+        if(StringUtils.hasText(token)){
+            try{
+                getAuthentication(token);
+            }catch (ExpiredJwtException e){
                 request.setAttribute("exception", JwtExceptionCode.EXPIRED_TOKEN.getCode());
-                log.error("Expired Token : {}", accessToken, e);
+                log.error("Expired Token : {}",token,e);
                 throw new BadCredentialsException("Expired token exception", e);
-            } catch (UnsupportedJwtException e) {
+            }catch (UnsupportedJwtException e){
                 request.setAttribute("exception", JwtExceptionCode.UNSUPPORTED_TOKEN.getCode());
-                log.error("Unsupported Token: {}", accessToken, e);
+                log.error("Unsupported Token: {}", token, e);
                 throw new BadCredentialsException("Unsupported token exception", e);
             } catch (MalformedJwtException e) {
                 request.setAttribute("exception", JwtExceptionCode.INVALID_TOKEN.getCode());
-                log.error("Invalid Token: {}", accessToken, e);
+                log.error("Invalid Token: {}", token, e);
                 throw new BadCredentialsException("Invalid token exception", e);
             } catch (IllegalArgumentException e) {
                 request.setAttribute("exception", JwtExceptionCode.NOT_FOUND_TOKEN.getCode());
-                log.error("Token not found: {}", accessToken, e);
+                log.error("Token not found: {}", token, e);
                 throw new BadCredentialsException("Token not found exception", e);
             } catch (Exception e) {
-                log.error("JWT Filter - Internal Error: {}", accessToken, e);
+                log.error("JWT Filter - Internal Error: {}", token, e);
                 throw new BadCredentialsException("JWT filter internal exception", e);
             }
-        } else {
-            String refreshToken = getToken(request, "refreshToken");
-            if (StringUtils.hasText(refreshToken)) {
-                try {
-                    getAuthentication(refreshToken, "refreshToekn", response);
-                } catch (ExpiredJwtException e) {
-                    request.setAttribute("exception", JwtExceptionCode.EXPIRED_TOKEN.getCode());
-                    log.error("Expired Token : {}", refreshToken, e);
-                    throw new BadCredentialsException("Expired token exception", e);
-                } catch (UnsupportedJwtException e) {
-                    request.setAttribute("exception", JwtExceptionCode.UNSUPPORTED_TOKEN.getCode());
-                    log.error("Unsupported Token: {}", refreshToken, e);
-                    throw new BadCredentialsException("Unsupported token exception", e);
-                } catch (MalformedJwtException e) {
-                    request.setAttribute("exception", JwtExceptionCode.INVALID_TOKEN.getCode());
-                    log.error("Invalid Token: {}", refreshToken, e);
-                    throw new BadCredentialsException("Invalid token exception", e);
-                } catch (IllegalArgumentException e) {
-                    request.setAttribute("exception", JwtExceptionCode.NOT_FOUND_TOKEN.getCode());
-                    log.error("Token not found: {}", refreshToken, e);
-                    throw new BadCredentialsException("Token not found exception", e);
-                } catch (Exception e) {
-                    log.error("JWT Filter - Internal Error: {}", refreshToken, e);
-                    throw new BadCredentialsException("JWT filter internal exception", e);
-                }
-            }
-
         }
         filterChain.doFilter(request, response);
     }
-
-    private void getAuthentication(String token, String tokenName, HttpServletResponse response) {
+    private void getAuthentication(String token){
         Claims claims = jwtTokenizer.parseAccessToken(token);
         String email = claims.getSubject();
         Long userId = claims.get("userId", Long.class);
@@ -103,38 +70,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String username = claims.get("username", String.class);
         List<GrantedAuthority> authorities = getGrantedAuthorities(claims);
 
-        if ("refreshToken".equals(tokenName)) {
-            List<String> roles = (List<String>)claims.get("roles");
+        CustomUserDetails userDetails = new CustomUserDetails(username,"",name,authorities.stream().map(GrantedAuthority::getAuthority).collect(Collectors.toList()));
 
-            String accessToken = jwtTokenizer.createAccessToken(userId, email, name, username, roles);
-
-            Cookie accessTokenCookie = new Cookie("accessToken", accessToken);
-            accessTokenCookie.setHttpOnly(true);
-            accessTokenCookie.setPath("/");
-            accessTokenCookie.setMaxAge(
-                    Math.toIntExact(
-                            JwtTokenizer.ACCESS_TOKEN_EXPIRE_COUNT / 1000));
-
-            response.addCookie(accessTokenCookie);
-        }
-
-        CustomUserDetails userDetails = new CustomUserDetails(username, "", name,
-                authorities.stream().map(GrantedAuthority::getAuthority).collect(Collectors.toList()));
-
-        Authentication authentication = new JwtAuthenticationToken(authorities, userDetails, null);
+        Authentication authentication = new JwtAuthenticationToken(authorities,userDetails,null);
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 
-    private List<GrantedAuthority> getGrantedAuthorities(Claims claims) {
+    private List<GrantedAuthority> getGrantedAuthorities(Claims claims){
         List<String> roles = (List<String>)claims.get("roles");
         List<GrantedAuthority> authorities = new ArrayList<>();
-        for (String role : roles) {
-            authorities.add(() -> role);
+        for (String role : roles){
+            authorities.add(()->role);
         }
         return authorities;
     }
 
-    private String getToken(HttpServletRequest request, String tokenName) {
+    private String getToken(HttpServletRequest request) {
         String authorization = request.getHeader("Authorization");
         if (StringUtils.hasText(authorization) && authorization.startsWith("Bearer ")) {
             return authorization.substring(7);
@@ -143,7 +94,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
             for (Cookie cookie : cookies) {
-                if (tokenName.equals(cookie.getName())) {
+                if ("accessToken".equals(cookie.getName())) {
                     return cookie.getValue();
                 }
             }

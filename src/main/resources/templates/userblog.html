@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org/">
+<head>
+    <meta charset="UTF-8">
+    <title>UserBlog</title>
+    <link rel="stylesheet" th:href="@{/css/header.css}">
+    <link rel="stylesheet" th:href="@{/css/userBlog.css}">
+</head>
+<body>
+<header>
+    <div class="header">
+        <a class="blog-name" th:href="@{/velog}" th:text="${loginUser.name} + 'log'"></a>
+        <div class="menu">
+            <!-- 메뉴 항목들 -->
+        </div>
+        <div class="auth-buttons">
+            <a class="new-write" th:href="@{'/velog/' + ${loginUser.username} + '/post'}">
+                <button type="button">New Post</button>
+            </a>
+            <div class="user-settings">
+                <img class="profile-image" th:src="@{'/images/' + ${loginUser.profileImage}}" alt="Profile Image">
+                <div class="dropdown-content">
+                    <a th:href="@{'/velog/' + ${loginUser.username}}">내 블로그</a>
+                    <a th:href="@{'/velog/' + ${loginUser.username} + '/drafts'}">임시 글</a>
+                    <a th:href="@{'/velog/' + ${loginUser.username} + '/settings'}">설정</a>
+                    <a id="logout-button">로그아웃</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<main>
+    <div class="main">
+        <div class="user-info">
+            <div class="img-name">
+                <img class="profile-image" th:src="@{'/images/' + ${loginUser.profileImage}}" alt="Profile Image">
+                <span class="user-name" th:text="${loginUser.username}"></span>
+            </div>
+            <hr class="divider">
+            <div class="follow-info">
+                <span class="followers" th:text="${loginUser.followers} + ' followers'"></span>
+                <span class="followings" th:text="${loginUser.followings} + ' followings'"></span>
+            </div>
+        </div>
+
+        <div class="show-posts">
+            <h2>Your Posts:</h2>
+            <div class="posts-box" id="posts-box">
+                <ul>
+                    <li th:each="post : ${posts}">
+                        <div class="post-each">
+                            <a th:href="@{'/velog/' + ${loginUser.username} + '/post/' + ${post.id} + '/' + ${post.encodedTitle}}">
+                                <img class="post-thumbnail" th:src="@{'/images/' + ${post.thumbnailImage}}" alt="Post Thumbnail">
+                                <h3 th:text="${post.title}">Post Title</h3>
+                                <p th:text="${post.ment}">Post Ment</p>
+                            </a>
+                            <!--                            <p th:text="${post.content}">Post Content</p>-->
+                            <p th:text="${#temporals.format(post.releaseDate, 'yyyy년 MM월 dd일')}">Post ReleaseDate</p>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script th:src="@{/js/header.js}"></script>
+<script th:src="@{/js/infinitescroll.js}"></script>
+</body>
+</html>
