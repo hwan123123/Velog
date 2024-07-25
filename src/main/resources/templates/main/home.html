@@ -18,7 +18,7 @@
         </ul>
     </nav>
     <div class="auth-buttons">
-        <div th:if="${user != null}">
+        <div style="display:flex; justify-content: flex-end; align-items: center" th:if="${user != null}" >
             <a class="new-write" th:href="@{'/velog/' + ${user.username} + '/post'}">
                 <button type="button">New Post</button>
             </a>
